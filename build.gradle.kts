@@ -1,9 +1,11 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     java
     `java-library`
     `maven-publish`
-    kotlin("jvm") version "1.9.20"
-    id("io.github.goooler.shadow") version "8.1.7"
+    kotlin("jvm") version "2.1.0"
+    id("com.gradleup.shadow") version "8.3.5"
     id("com.willfp.libreforge-gradle-plugin") version "1.0.0"
 }
 
@@ -17,23 +19,19 @@ base {
 
 dependencies {
     implementation(project(":eco-core:core-plugin"))
-    implementation(project(":eco-core:core-nms:v1_17_R1"))
-    implementation(project(":eco-core:core-nms:v1_18_R1"))
-    implementation(project(":eco-core:core-nms:v1_18_R2"))
-    implementation(project(":eco-core:core-nms:v1_19_R1"))
-    implementation(project(":eco-core:core-nms:v1_19_R2"))
-    implementation(project(":eco-core:core-nms:v1_19_R3"))
-    implementation(project(":eco-core:core-nms:v1_20_R1"))
-    implementation(project(":eco-core:core-nms:v1_20_R2"))
-    implementation(project(":eco-core:core-nms:v1_20_R3", configuration = "reobf"))
-    implementation(project(":eco-core:core-nms:v1_20_6", configuration = "reobf"))
+    implementation(project(":eco-core:core-nms:v1_21_4", configuration = "reobf"))
+    implementation(project(":eco-core:core-nms:v1_21_5", configuration = "reobf"))
+    implementation(project(":eco-core:core-nms:v1_21_6", configuration = "reobf"))
+    implementation(project(":eco-core:core-nms:v1_21_7", configuration = "reobf"))
+    implementation(project(":eco-core:core-nms:v1_21_8", configuration = "reobf"))
+    implementation(project(":eco-core:core-nms:v1_21_10", configuration = "reobf"))
 }
 
 allprojects {
     apply(plugin = "java")
     apply(plugin = "kotlin")
     apply(plugin = "maven-publish")
-    apply(plugin = "io.github.goooler.shadow")
+    apply(plugin = "com.gradleup.shadow")
 
     repositories {
         mavenLocal()
@@ -41,16 +39,19 @@ allprojects {
 
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://repo.auxilor.io/repository/maven-public/")
-        maven("https://jitpack.io")
         maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
         maven("https://repo.codemc.org/repository/nms/")
         maven("https://repo.essentialsx.net/releases/")
+
+        maven("https://jitpack.io") {
+            content { includeGroupByRegex("com\\.github\\..*") }
+        }
     }
 
     dependencies {
-        compileOnly("com.willfp:eco:6.70.0")
+        compileOnly("com.willfp:eco:6.77.0")
         compileOnly("org.jetbrains:annotations:23.0.0")
-        compileOnly("org.jetbrains.kotlin:kotlin-stdlib:1.9.20")
+        compileOnly("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
         compileOnly("com.github.ben-manes.caffeine:caffeine:3.1.5")
     }
 
@@ -60,15 +61,9 @@ allprojects {
         }
 
         compileKotlin {
-            kotlinOptions {
-                jvmTarget = "17"
+            compilerOptions {
+                jvmTarget.set(JvmTarget.JVM_21)
             }
-        }
-
-        java {
-            sourceCompatibility = JavaVersion.VERSION_17
-            targetCompatibility = JavaVersion.VERSION_17
-            withSourcesJar()
         }
 
         compileJava {
@@ -91,12 +86,16 @@ allprojects {
         build {
             dependsOn(shadowJar)
         }
-    }
-}
 
-// Root is Java 21 to support 1.20.6+, rest use Java 17
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-    withSourcesJar()
+        withType<JavaCompile>().configureEach {
+            options.release = 21
+        }
+    }
+
+    java {
+        withSourcesJar()
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
 }

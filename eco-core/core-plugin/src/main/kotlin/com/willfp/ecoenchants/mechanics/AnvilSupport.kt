@@ -6,7 +6,6 @@ import com.willfp.eco.core.proxy.ProxyConstants
 import com.willfp.eco.util.StringUtils
 import com.willfp.ecoenchants.enchant.EcoEnchants
 import com.willfp.ecoenchants.enchant.wrap
-import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.Tag
 import org.bukkit.entity.Player
@@ -14,11 +13,10 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.PrepareAnvilEvent
-import org.bukkit.inventory.AnvilInventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.Damageable
 import org.bukkit.inventory.meta.EnchantmentStorageMeta
-import java.util.*
+import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
@@ -39,11 +37,6 @@ interface OpenInventoryProxy {
     fun getOpenInventory(player: Player): Any
 }
 
-interface AnvilRepairCostProxy {
-    fun setMaxRepairCost(inventory: AnvilInventory, cost: Int)
-}
-
-@Suppress("DEPRECATION")
 class AnvilSupport(
     private val plugin: EcoPlugin
 ) : Listener {
@@ -62,6 +55,18 @@ class AnvilSupport(
     @EventHandler(priority = EventPriority.HIGHEST)
     fun onAnvilPrepare(event: PrepareAnvilEvent) {
         val player = event.viewers.getOrNull(0) as? Player ?: return
+        val permanenceCurse = EcoEnchants.getByID("permanence_curse")
+        val leftItem = event.inventory.getItem(0)
+        val rightItem = event.inventory.getItem(1)
+        if (permanenceCurse != null) {
+            if ((leftItem != null && leftItem.fast().getEnchants(true).containsKey(permanenceCurse.enchantment)) ||
+                (rightItem != null && rightItem.fast().getEnchants(true).containsKey(permanenceCurse.enchantment))
+            ) {
+                event.result = null
+                event.inventory.setItem(2, null)
+                return
+            }
+        }
 
         if (this.plugin.getProxy(OpenInventoryProxy::class.java)
                 .getOpenInventory(player)::class.java.toString() == anvilGuiClass
@@ -88,6 +93,7 @@ class AnvilSupport(
             val result = doMerge(
                 left,
                 right,
+                @Suppress("REMOVAL", "DEPRECATION")
                 event.inventory.renameText ?: "",
                 player
             )
@@ -95,6 +101,7 @@ class AnvilSupport(
             val price = result.xp ?: 0
             val outItem = result.result ?: ItemStack(Material.AIR)
 
+            @Suppress("REMOVAL", "DEPRECATION")
             val oldCost = event.inventory.repairCost
 
             val oldLeft = event.inventory.getItem(0)
@@ -138,7 +145,10 @@ class AnvilSupport(
                 outItem.fast().repairCost = (repairCost + 1) * 2 - 1
             }
 
+            @Suppress("REMOVAL", "DEPRECATION")
             event.inventory.maximumRepairCost = plugin.configYml.getInt("anvil.max-repair-cost").infiniteIfNegative()
+
+            @Suppress("REMOVAL", "DEPRECATION")
             event.inventory.repairCost = cost
             event.result = outItem
             event.inventory.setItem(2, outItem)
@@ -158,16 +168,9 @@ class AnvilSupport(
         val formattedItemName = if (player.hasPermission("ecoenchants.anvil.color")) {
             StringUtils.format(itemName)
         } else {
-            ChatColor.stripColor(itemName)
+            @Suppress("DEPRECATION")
+            org.bukkit.ChatColor.stripColor(itemName)
         }.let { if (it.isNullOrEmpty()) left.fast().displayName else it }
-
-        val permanenceCurse = EcoEnchants.getByID("permanence_curse")
-
-        if (permanenceCurse != null) {
-            if (left.fast().getEnchants(true).containsKey(permanenceCurse.enchantment)) {
-                return FAIL
-            }
-        }
 
         if (right == null || right.type == Material.AIR) {
             if (left.fast().displayName == formattedItemName) {
@@ -198,7 +201,9 @@ class AnvilSupport(
                 if (toDeduct <= 0) {
                     return FAIL
                 } else {
-                    leftMeta.damage -= toDeduct * perUnit
+                    val newDamage = leftMeta.damage - toDeduct * perUnit
+                    leftMeta.damage = newDamage.coerceAtLeast(0) // Prevent negative damage
+
                     right.amount -= toDeduct
                 }
             } else {
@@ -241,7 +246,7 @@ class AnvilSupport(
             val rightDurability = maxDamage - rightMeta.damage
             val damage = maxDamage - max(maxDamage, leftDurability + rightDurability)
 
-            leftMeta.damage = damage
+            leftMeta.damage = damage.coerceAtLeast(0) // Prevent negative damage
         }
 
         if (leftMeta is EnchantmentStorageMeta) {
@@ -266,7 +271,7 @@ class AnvilSupport(
 
         val enchantLevelDiff = abs(leftEnchants.values.sum() - outEnchants.values.sum())
         val xpCost =
-            plugin.configYml.getDouble("anvil.cost-exponent").pow(enchantLevelDiff) * enchantLevelDiff + unitRepairCost
+            enchantLevelDiff.toDouble().pow(plugin.configYml.getDouble("anvil.cost-exponent")) + unitRepairCost
 
         return AnvilResult(left, xpCost.roundToInt())
     }
@@ -378,7 +383,7 @@ private val repair = mapOf<Collection<Material>, Collection<Material>>(
     ),
     Pair(
         listOf(
-            Material.SCUTE
+            Material.TURTLE_SCUTE
         ),
         listOf(
             Material.TURTLE_HELMET

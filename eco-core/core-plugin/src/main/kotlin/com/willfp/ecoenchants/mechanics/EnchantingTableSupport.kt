@@ -70,6 +70,7 @@ class EnchantingTableSupport(
         }
 
         if (item.type == Material.BOOK) {
+            @Suppress("DEPRECATION")
             item.type = Material.ENCHANTED_BOOK
         }
 
@@ -134,8 +135,8 @@ class EnchantingTableSupport(
                 cost / maxObtainableLevel.toDouble()
             }
 
-            val levelPart2 = NumberUtils.bias(levelPart1, enchantment.type.highLevelBias)
-            val levelPart3 = NumberUtils.triangularDistribution(0.0, 1.0, levelPart2)
+            val levelPart2 = NumberUtils.triangularDistribution(0.0, 1.0, levelPart1)
+            val levelPart3 = NumberUtils.bias(levelPart2, enchantment.type.highLevelBias)
             val level = ceil(levelPart3 * maxLevel).coerceIn(1.0..maxLevel.toDouble()).toInt()
 
             multiplier /= this.plugin.configYml.getDouble("enchanting-table.reduction")
@@ -146,7 +147,7 @@ class EnchantingTableSupport(
         toAdd.forEach(event.enchantsToAdd::putIfAbsent)
 
         if (toAdd.isEmpty() && isExtraEnchantable) {
-            toAdd[Enchantment.DURABILITY] =
+            toAdd[Enchantment.UNBREAKING] =
                 ExtraItemSupport.currentlyEnchantingExtraItem[player.uniqueId]!![event.whichButton()]
             ExtraItemSupport.currentlyEnchantingExtraItem.remove(player.uniqueId)
         }
@@ -216,9 +217,9 @@ class EnchantingTableSupport(
         }
 
         val offers = arrayOf(
-            EnchantmentOffer(Enchantment.DURABILITY, 1, bottomEnchantLevel),
-            EnchantmentOffer(Enchantment.DURABILITY, midUnbreakingLevel, midEnchantLevel),
-            EnchantmentOffer(Enchantment.DURABILITY, topUnbreakingLevel, topEnchantLevel)
+            EnchantmentOffer(Enchantment.UNBREAKING, 1, bottomEnchantLevel),
+            EnchantmentOffer(Enchantment.UNBREAKING, midUnbreakingLevel, midEnchantLevel),
+            EnchantmentOffer(Enchantment.UNBREAKING, topUnbreakingLevel, topEnchantLevel)
         )
 
         for (i in offers.indices) {

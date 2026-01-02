@@ -1,10 +1,9 @@
 package com.willfp.ecoenchants
 
-import com.willfp.eco.core.Prerequisite
+import com.willfp.eco.core.LifecyclePosition
 import com.willfp.eco.core.command.impl.PluginCommand
 import com.willfp.eco.core.display.DisplayModule
 import com.willfp.eco.core.integrations.IntegrationLoader
-import com.willfp.eco.core.packet.PacketListener
 import com.willfp.ecoenchants.commands.CommandEcoEnchants
 import com.willfp.ecoenchants.commands.CommandEnchant
 import com.willfp.ecoenchants.commands.CommandEnchantInfo
@@ -19,10 +18,8 @@ import com.willfp.ecoenchants.enchant.EcoEnchantLevel
 import com.willfp.ecoenchants.enchant.EcoEnchants
 import com.willfp.ecoenchants.enchant.EnchantGUI
 import com.willfp.ecoenchants.enchant.LoreConversion
-import com.willfp.ecoenchants.enchant.legacyRegisterVanillaEnchantmentData
 import com.willfp.ecoenchants.enchant.registration.EnchantmentRegisterer
-import com.willfp.ecoenchants.enchant.registration.legacy.LegacyEnchantmentRegisterer
-import com.willfp.ecoenchants.enchant.registration.modern.ModernEnchantmentRegistererProxy
+import com.willfp.ecoenchants.enchant.registration.ModernEnchantmentRegistererProxy
 import com.willfp.ecoenchants.integrations.EnchantRegistrations
 import com.willfp.ecoenchants.integrations.plugins.CMIIntegration
 import com.willfp.ecoenchants.integrations.plugins.EssentialsIntegration
@@ -40,7 +37,6 @@ import com.willfp.libreforge.loader.configs.ConfigCategory
 import com.willfp.libreforge.registerHolderPlaceholderProvider
 import com.willfp.libreforge.registerHolderProvider
 import com.willfp.libreforge.registerSpecificRefreshFunction
-import org.bukkit.Bukkit
 import org.bukkit.entity.LivingEntity
 import org.bukkit.event.Listener
 
@@ -55,18 +51,12 @@ class EcoEnchantsPlugin : LibreforgePlugin() {
     var isLoaded = false
         private set
 
-    val enchantmentRegisterer: EnchantmentRegisterer = if (Prerequisite.HAS_1_20_3.isMet) {
-        this.getProxy(ModernEnchantmentRegistererProxy::class.java)
-    } else {
-        LegacyEnchantmentRegisterer
-    }
+    val enchantmentRegisterer: EnchantmentRegisterer = this.getProxy(ModernEnchantmentRegistererProxy::class.java)
 
     init {
         plugin = this
 
-        if (Prerequisite.HAS_1_20_3.isMet) {
-            plugin.getProxy(ModernEnchantmentRegistererProxy::class.java).replaceRegistry()
-        }
+        plugin.getProxy(ModernEnchantmentRegistererProxy::class.java).replaceRegistry()
     }
 
     override fun loadConfigCategories(): List<ConfigCategory> {
@@ -87,31 +77,15 @@ class EcoEnchantsPlugin : LibreforgePlugin() {
                 NamedValue("level", it.level),
             )
         }
-
-        if (Prerequisite.HAS_1_20_5.isMet) {
-            getProxy(CodecReplacerProxy::class.java).replaceItemCodec()
-        }
     }
 
     override fun handleAfterLoad() {
         isLoaded = true
 
-        // Run in afterLoad to prevent items from having their enchantments deleted
-        if (Prerequisite.HAS_1_20_5.isMet) {
-            if (!this.configYml.getBool("enable-1-20-6")) {
-                Bukkit.getPluginManager().disablePlugin(this)
-
-                throw IllegalStateException("EcoEnchants should not be ran in production on 1.20.6. " +
-                        "If this is a development environment, please set 'enable-1-20-6' to true in config.yml. ")
-            }
-        }
+        plugin.getProxy(ModernEnchantmentRegistererProxy::class.java).replaceRegistry()
     }
 
     override fun handleReload() {
-        if (!Prerequisite.HAS_1_20_3.isMet) {
-            legacyRegisterVanillaEnchantmentData(this)
-        }
-
         DisplayCache.reload()
         EnchantSorter.reload(this)
         ExtraItemSupport.reload(this)
@@ -144,9 +118,13 @@ class EcoEnchantsPlugin : LibreforgePlugin() {
         )
     }
 
-    override fun createDisplayModule(): DisplayModule? {
-        return if (configYml.getBool("display.enabled")) {
+    override fun loadDisplayModules(): List<DisplayModule> {
+        if (!this.configYml.getBool("display.enabled")) {
+            return emptyList()
+        }
+
+        return listOf(
             EnchantDisplay(this)
-        } else null
+        )
     }
 }
