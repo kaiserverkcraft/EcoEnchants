@@ -12,11 +12,13 @@ import com.willfp.ecoenchants.enchant.impl.hardcoded.EnchantmentReplenish
 import com.willfp.ecoenchants.enchant.impl.hardcoded.EnchantmentSoulbound
 import com.willfp.ecoenchants.enchant.registration.ModernEnchantmentRegistererProxy
 import com.willfp.ecoenchants.integrations.EnchantRegistrations
+import com.willfp.ecoenchants.plugin
 import com.willfp.ecoenchants.rarity.EnchantmentRarities
 import com.willfp.ecoenchants.target.EnchantmentTargets
 import com.willfp.ecoenchants.type.EnchantmentTypes
 import com.willfp.libreforge.loader.LibreforgePlugin
 import com.willfp.libreforge.loader.configs.RegistrableCategory
+import org.bukkit.ChatColor
 
 @Suppress("UNUSED")
 object EcoEnchants : RegistrableCategory<EcoEnchant>("enchant", "enchants") {
@@ -30,7 +32,7 @@ object EcoEnchants : RegistrableCategory<EcoEnchant>("enchant", "enchants") {
         for (enchant in registry.values()) {
             plugin.enchantmentRegisterer.unregister(enchant)
             EnchantRegistrations.removeEnchant(enchant)
-            BY_NAME.remove(enchant.getFormattedName(0))
+            BY_NAME.remove(ChatColor.stripColor(enchant.getFormattedName(0)))
         }
 
         registry.clear()
@@ -39,18 +41,14 @@ object EcoEnchants : RegistrableCategory<EcoEnchant>("enchant", "enchants") {
     override fun beforeReload(plugin: LibreforgePlugin) {
         plugin.getProxy(ModernEnchantmentRegistererProxy::class.java).replaceRegistry()
 
-        plugin as EcoEnchantsPlugin
-
-        EnchantmentRarities.update(plugin)
-        EnchantmentTargets.update(plugin)
-        EnchantmentTypes.update(plugin)
+        EnchantmentRarities.update()
+        EnchantmentTargets.update()
+        EnchantmentTypes.update()
     }
 
     override fun afterReload(plugin: LibreforgePlugin) {
-        plugin as EcoEnchantsPlugin
-
-        sendPrompts(plugin)
-        registerHardcodedEnchantments(plugin)
+        sendPrompts()
+        registerHardcodedEnchantments()
 
         plugin.getProxy(ModernEnchantmentRegistererProxy::class.java).freezeRegistry()
     }
@@ -65,11 +63,10 @@ object EcoEnchants : RegistrableCategory<EcoEnchant>("enchant", "enchants") {
         try {
             val enchant = LibreforgeEcoEnchant(
                 id,
-                config,
-                plugin
+                config
             )
 
-            doRegister(plugin, enchant)
+            doRegister(enchant)
         } catch (e: MissingDependencyException) {
             // Ignore missing dependencies for preloaded enchants
         }
@@ -86,38 +83,35 @@ object EcoEnchants : RegistrableCategory<EcoEnchant>("enchant", "enchants") {
             val enchant = LibreforgeEcoEnchant(
                 id,
                 config,
-                plugin
             )
 
-            doRegister(plugin, enchant)
+            doRegister(enchant)
         } catch (e: MissingDependencyException) {
             addPluginPrompt(plugin, e.plugins)
         }
     }
 
-    private fun doRegister(plugin: EcoEnchantsPlugin, enchant: EcoEnchantBase) {
+    private fun doRegister(enchant: EcoEnchantBase) {
         val enchantment = plugin.enchantmentRegisterer.register(enchant)
         // Register delegated versions
         registry.register(enchantment as EcoEnchant)
         @Suppress("DEPRECATION")
-        BY_NAME[org.bukkit.ChatColor.stripColor(enchant.getFormattedName(0))] = enchantment as EcoEnchant
+        BY_NAME[ChatColor.stripColor(enchant.getFormattedName(0))] = enchantment as EcoEnchant
         EnchantRegistrations.registerEnchantments()
     }
 
-    private fun registerHardcodedEnchantments(
-        plugin: EcoEnchantsPlugin
-    ) {
+    private fun registerHardcodedEnchantments() {
         val hardcodedEnchantments = listOf(
-            EnchantmentPermanenceCurse(plugin),
-            EnchantmentRepairing(plugin),
-            EnchantmentReplenish(plugin),
-            EnchantmentSoulbound(plugin)
+            EnchantmentPermanenceCurse,
+            EnchantmentRepairing,
+            EnchantmentReplenish,
+            EnchantmentSoulbound
         )
 
         for (enchantment in hardcodedEnchantments) {
             // Only register if not already registered (so hardcode can be overridden)
             if (enchantment.isPresent && registry[enchantment.id] == null) {
-                doRegister(plugin, enchantment)
+                doRegister(enchantment)
             }
         }
     }

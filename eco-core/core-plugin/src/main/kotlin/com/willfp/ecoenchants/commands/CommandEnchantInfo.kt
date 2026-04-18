@@ -1,17 +1,19 @@
 package com.willfp.ecoenchants.commands
 
 import com.willfp.eco.core.command.impl.PluginCommand
-import com.willfp.ecoenchants.EcoEnchantsPlugin
 import com.willfp.ecoenchants.display.getFormattedName
 import com.willfp.ecoenchants.enchant.EcoEnchants
 import com.willfp.ecoenchants.enchant.EnchantGUI
+import com.willfp.ecoenchants.plugin
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bukkit.util.StringUtil
 
-
-class CommandEnchantInfo(plugin: EcoEnchantsPlugin) : PluginCommand(
-    plugin, "enchantinfo", "ecoenchants.command.enchantinfo", true
+object CommandEnchantInfo : PluginCommand(
+    plugin,
+    "enchantinfo",
+    "ecoenchants.command.enchantinfo",
+    true
 ) {
     override fun onExecute(sender: CommandSender, args: List<String>) {
         sender as Player
@@ -35,7 +37,7 @@ class CommandEnchantInfo(plugin: EcoEnchantsPlugin) : PluginCommand(
             return
         }
 
-        EnchantGUI.openInfoGUI(sender, enchantment, plugin as EcoEnchantsPlugin)
+        EnchantGUI.openInfoGUI(sender, enchantment)
     }
 
     override fun tabComplete(sender: CommandSender, args: List<String>): List<String> {
@@ -51,12 +53,15 @@ class CommandEnchantInfo(plugin: EcoEnchantsPlugin) : PluginCommand(
 
         StringUtil.copyPartialMatches(args.joinToString(" "), names, completions)
 
-        if (args.size > 1) { // Remove all previous words from the candidate of completions
-            val finishedArgs = args.toMutableList()
-            finishedArgs.drop(args.size - 1)
-            val prefix = finishedArgs.joinToString(" ")
+        if (args.size > 1) {
+            val prefix = args.dropLast(1).joinToString(" ") + " "
+            val trimmed = completions.mapNotNull { completion ->
+                if (completion.startsWith(prefix)) {
+                    completion.removePrefix(prefix)
+                } else null
+            }
             completions.clear()
-            completions.stream().map { it.removePrefix(prefix).trim() }
+            completions.addAll(trimmed)
         }
 
         completions.sort()

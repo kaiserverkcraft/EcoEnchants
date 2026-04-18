@@ -1,19 +1,19 @@
-package com.willfp.ecoenchants.proxy.v1_21_4
+package com.willfp.ecoenchants.proxy.v1_21_11
 
 import com.willfp.ecoenchants.enchant.EcoEnchant
 import com.willfp.ecoenchants.enchant.EcoEnchants
 import com.willfp.ecoenchants.enchant.impl.EcoEnchantBase
 import com.willfp.ecoenchants.enchant.registration.ModernEnchantmentRegistererProxy
+import com.willfp.ecoenchants.proxy.v1_21_11.registration.vanillaEcoEnchantsEnchantment
 import com.willfp.ecoenchants.proxy.v1_21_4.registration.EcoEnchantsCraftEnchantment
 import com.willfp.ecoenchants.proxy.v1_21_4.registration.ModifiedVanillaCraftEnchantment
-import com.willfp.ecoenchants.proxy.v1_21_4.registration.vanillaEcoEnchantsEnchantment
 import io.papermc.paper.registry.entry.RegistryTypeMapper
 import io.papermc.paper.registry.legacy.DelayedRegistry
 import net.minecraft.core.Holder
 import net.minecraft.core.MappedRegistry
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.Registries
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 import org.bukkit.Bukkit
 import org.bukkit.NamespacedKey
 import org.bukkit.craftbukkit.CraftRegistry
@@ -23,7 +23,6 @@ import org.bukkit.enchantments.Enchantment
 import java.lang.reflect.Modifier
 import java.util.IdentityHashMap
 import java.util.function.BiFunction
-
 
 private val enchantmentRegistry =
     (Bukkit.getServer() as CraftServer).server.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
@@ -131,7 +130,7 @@ class ModernEnchantmentRegisterer : ModernEnchantmentRegistererProxy {
 
         Registry.register(
             enchantmentRegistry,
-            ResourceLocation.withDefaultNamespace(enchant.id),
+            Identifier.withDefaultNamespace(enchant.id),
             vanillaEnchantment
         )
 
